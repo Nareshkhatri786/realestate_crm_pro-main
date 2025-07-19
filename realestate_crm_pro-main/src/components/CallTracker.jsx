@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Button from '../../components/ui/Button';
-import Icon from '../../components/AppIcon';
-import { callsApi } from '../../api';
+import Button from '../components/ui/Button';
+import Icon from '../components/AppIcon';
+import { callsApi } from '../api';
 
 const CallStatusModal = ({ isOpen, onClose, onSave, call }) => {
   const [status, setStatus] = useState('');

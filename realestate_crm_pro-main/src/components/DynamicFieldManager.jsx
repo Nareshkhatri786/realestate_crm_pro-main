@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Button from '../../components/ui/Button';
-import Icon from '../../components/AppIcon';
-import { fieldsApi } from '../../api';
+import Button from '../components/ui/Button';
+import Icon from '../components/AppIcon';
+import { fieldsApi } from '../api';
 
 const FieldBuilder = ({ field, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);

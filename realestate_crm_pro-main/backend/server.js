@@ -49,6 +49,60 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
+// Dynamic Field Schema
+const fieldSchema = new mongoose.Schema({
+  name: String,
+  label: String,
+  type: String,
+  entityType: String,
+  options: [String],
+  validation: Object,
+  position: Number,
+  required: Boolean,
+  defaultValue: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const Field = mongoose.model('Field', fieldSchema);
+
+// Interaction Schema
+const interactionSchema = new mongoose.Schema({
+  contactId: String,
+  type: String,
+  outcome: String,
+  duration: Number,
+  notes: String,
+  metadata: Object,
+  source: String,
+  timestamp: { type: Date, default: Date.now }
+});
+const Interaction = mongoose.model('Interaction', interactionSchema);
+
+// Call Schema
+const callSchema = new mongoose.Schema({
+  contactId: String,
+  phoneNumber: String,
+  contactName: String,
+  status: String,
+  duration: Number,
+  notes: String,
+  startTime: Date,
+  endTime: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+const Call = mongoose.model('Call', callSchema);
+
+// WhatsApp Template Schema
+const whatsappTemplateSchema = new mongoose.Schema({
+  name: String,
+  category: String,
+  language: String,
+  components: Array,
+  variables: [String],
+  status: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const WhatsAppTemplate = mongoose.model('WhatsAppTemplate', whatsappTemplateSchema);
+
 // Authentication endpoint
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
@@ -103,6 +157,230 @@ app.put('/api/leads/:id', async (req, res) => {
 app.delete('/api/leads/:id', async (req, res) => {
   await Lead.findByIdAndDelete(req.params.id);
   res.status(204).end();
+});
+
+// --- Dynamic Fields API ---
+
+// Get fields for an entity type
+app.get('/api/fields/:entityType', async (req, res) => {
+  try {
+    const fields = await Field.find({ entityType: req.params.entityType }).sort({ position: 1 });
+    res.json(fields);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new field
+app.post('/api/fields', async (req, res) => {
+  try {
+    const field = new Field(req.body);
+    await field.save();
+    res.status(201).json(field);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update a field
+app.put('/api/fields/:id', async (req, res) => {
+  try {
+    const field = await Field.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!field) return res.status(404).json({ error: 'Field not found' });
+    res.json(field);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete a field
+app.delete('/api/fields/:id', async (req, res) => {
+  try {
+    await Field.findByIdAndDelete(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Interactions API ---
+
+// Get interactions for a contact
+app.get('/api/interactions', async (req, res) => {
+  try {
+    const { contactId, type, dateFrom, dateTo } = req.query;
+    const filters = {};
+    
+    if (contactId) filters.contactId = contactId;
+    if (type) filters.type = type;
+    if (dateFrom || dateTo) {
+      filters.timestamp = {};
+      if (dateFrom) filters.timestamp.$gte = new Date(dateFrom);
+      if (dateTo) filters.timestamp.$lte = new Date(dateTo);
+    }
+    
+    const interactions = await Interaction.find(filters).sort({ timestamp: -1 });
+    res.json(interactions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new interaction
+app.post('/api/interactions', async (req, res) => {
+  try {
+    const interaction = new Interaction(req.body);
+    await interaction.save();
+    res.status(201).json(interaction);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update an interaction
+app.put('/api/interactions/:id', async (req, res) => {
+  try {
+    const interaction = await Interaction.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!interaction) return res.status(404).json({ error: 'Interaction not found' });
+    res.json(interaction);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete an interaction
+app.delete('/api/interactions/:id', async (req, res) => {
+  try {
+    await Interaction.findByIdAndDelete(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Calls API ---
+
+// Get call history
+app.get('/api/calls', async (req, res) => {
+  try {
+    const { contactId, status, dateFrom, dateTo } = req.query;
+    const filters = {};
+    
+    if (contactId) filters.contactId = contactId;
+    if (status) filters.status = status;
+    if (dateFrom || dateTo) {
+      filters.startTime = {};
+      if (dateFrom) filters.startTime.$gte = new Date(dateFrom);
+      if (dateTo) filters.startTime.$lte = new Date(dateTo);
+    }
+    
+    const calls = await Call.find(filters).sort({ startTime: -1 });
+    res.json(calls);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new call log
+app.post('/api/calls', async (req, res) => {
+  try {
+    const call = new Call(req.body);
+    await call.save();
+    res.status(201).json(call);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update a call
+app.put('/api/calls/:id', async (req, res) => {
+  try {
+    const call = await Call.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!call) return res.status(404).json({ error: 'Call not found' });
+    res.json(call);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete a call
+app.delete('/api/calls/:id', async (req, res) => {
+  try {
+    await Call.findByIdAndDelete(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- WhatsApp Templates API ---
+
+// Get WhatsApp templates
+app.get('/api/whatsapp/templates', async (req, res) => {
+  try {
+    const templates = await WhatsAppTemplate.find().sort({ createdAt: -1 });
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new WhatsApp template
+app.post('/api/whatsapp/templates', async (req, res) => {
+  try {
+    const template = new WhatsAppTemplate(req.body);
+    await template.save();
+    res.status(201).json(template);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update a WhatsApp template
+app.put('/api/whatsapp/templates/:id', async (req, res) => {
+  try {
+    const template = await WhatsAppTemplate.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    res.json(template);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete a WhatsApp template
+app.delete('/api/whatsapp/templates/:id', async (req, res) => {
+  try {
+    await WhatsAppTemplate.findByIdAndDelete(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- WhatsApp Messages API ---
+
+// Log WhatsApp message
+app.post('/api/whatsapp/messages', async (req, res) => {
+  try {
+    // Log as interaction
+    const interaction = new Interaction({
+      contactId: req.body.contactId,
+      type: 'whatsapp',
+      outcome: req.body.outcome || 'sent',
+      notes: req.body.notes || '',
+      metadata: {
+        messageType: req.body.messageType,
+        templateId: req.body.templateId,
+        phoneNumber: req.body.phoneNumber
+      },
+      source: 'api'
+    });
+    
+    await interaction.save();
+    res.status(201).json(interaction);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
 // --- Optional: Protected Routes Example (for future use) ---

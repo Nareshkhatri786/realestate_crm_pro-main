@@ -10,6 +10,11 @@ import LeadProfileModal from './components/LeadProfileModal';
 import MobileLeadCard from './components/MobileLeadCard';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import CallTracker from '../../components/CallTracker';
+import InteractionTimeline from '../../components/InteractionTimeline';
+import DynamicFieldManager from '../../components/DynamicFieldManager';
+import MessageSender from '../whats-app-campaign-management/components/MessageSender';
+import { callsApi, interactionsApi } from '../../api';
 
 const API_URL = "http://localhost:5000/api/leads";
 
@@ -24,6 +29,15 @@ const LeadsManagement = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [leadsPerPage] = useState(20);
+  
+  // New modal states
+  const [isCallTrackerOpen, setIsCallTrackerOpen] = useState(false);
+  const [isInteractionTimelineOpen, setIsInteractionTimelineOpen] = useState(false);
+  const [isFieldManagerOpen, setIsFieldManagerOpen] = useState(false);
+  const [isMessageSenderOpen, setIsMessageSenderOpen] = useState(false);
+  const [callTrackingLead, setCallTrackingLead] = useState(null);
+  const [interactionLead, setInteractionLead] = useState(null);
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
 
   // Fetch leads from backend
   useEffect(() => {
@@ -189,12 +203,39 @@ const LeadsManagement = () => {
     setSelectedLeads([]);
   };
 
-  const handleLeadAction = (leadId, action) => {
+  const handleLeadAction = async (leadId, action) => {
     const lead = leads.find(l => l._id === leadId);
     switch (action) {
       case 'view-profile':
         setSelectedLead(lead);
         setIsProfileModalOpen(true);
+        break;
+      case 'call-tracker':
+        setCallTrackingLead(lead);
+        setIsCallTrackerOpen(true);
+        break;
+      case 'interactions':
+        setInteractionLead(lead);
+        setIsInteractionTimelineOpen(true);
+        break;
+      case 'whatsapp':
+        setSelectedRecipients([{
+          name: lead.name,
+          phone: lead.phone,
+          id: lead._id
+        }]);
+        setIsMessageSenderOpen(true);
+        break;
+      case 'call':
+        // Quick call - open dialer and log interaction
+        const dialerResponse = callsApi.openDialer(lead.phone);
+        if (dialerResponse.success) {
+          // Auto-log the call attempt
+          await interactionsApi.autoLogInteraction('call', lead._id, {
+            outcome: 'initiated',
+            notes: 'Quick call initiated from leads page'
+          });
+        }
         break;
       default:
         break;
@@ -315,6 +356,7 @@ const LeadsManagement = () => {
                 onBulkAction={handleBulkAction}
                 onImportLeads={handleImportLeads}
                 onExportLeads={handleExportLeads}
+                onManageFields={() => setIsFieldManagerOpen(true)}
               />
               {/* Results Summary */}
               <div className="mb-4 flex items-center justify-between">
@@ -420,6 +462,56 @@ const LeadsManagement = () => {
           setSelectedLead(null);
         }}
         onUpdateLead={handleUpdateLead}
+      />
+      
+      {/* Call Tracker Modal */}
+      <CallTracker
+        contactId={callTrackingLead?._id}
+        contactName={callTrackingLead?.name}
+        phoneNumber={callTrackingLead?.phone}
+        isOpen={isCallTrackerOpen}
+        onClose={() => {
+          setIsCallTrackerOpen(false);
+          setCallTrackingLead(null);
+        }}
+      />
+      
+      {/* Interaction Timeline Modal */}
+      <InteractionTimeline
+        contactId={interactionLead?._id}
+        contactName={interactionLead?.name}
+        isOpen={isInteractionTimelineOpen}
+        onClose={() => {
+          setIsInteractionTimelineOpen(false);
+          setInteractionLead(null);
+        }}
+      />
+      
+      {/* Dynamic Field Manager Modal */}
+      <DynamicFieldManager
+        entityType="leads"
+        isOpen={isFieldManagerOpen}
+        onClose={() => setIsFieldManagerOpen(false)}
+      />
+      
+      {/* WhatsApp Message Sender Modal */}
+      <MessageSender
+        isOpen={isMessageSenderOpen}
+        onClose={() => {
+          setIsMessageSenderOpen(false);
+          setSelectedRecipients([]);
+        }}
+        recipients={selectedRecipients}
+        onSendComplete={(results) => {
+          console.log('Message send results:', results);
+          // Log WhatsApp interactions
+          selectedRecipients.forEach(async (recipient) => {
+            await interactionsApi.autoLogInteraction('whatsapp', recipient.id, {
+              outcome: 'sent',
+              notes: 'WhatsApp message sent from leads page'
+            });
+          });
+        }}
       />
     </div>
   );
