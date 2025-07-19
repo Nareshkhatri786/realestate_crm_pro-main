@@ -736,7 +736,6 @@ app.get('/api/interactions', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // Create interaction
 app.post('/api/interactions', async (req, res) => {
   try {
@@ -764,14 +763,6 @@ app.put('/api/interactions/:id', async (req, res) => {
 });
 
 // Delete interaction
-app.delete('/api/interactions/:id', async (req, res) => {
-  try {
-    await Interaction.findByIdAndDelete(req.params.id);
-    res.status(204).end();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 app.delete('/api/interactions/:id', async (req, res) => {
   try {
     await Interaction.findByIdAndDelete(req.params.id);
