@@ -9,23 +9,84 @@ const WHATSAPP_API_CONFIG = {
   }
 };
 
-// Create WhatsApp API client
-const whatsappClient = axios.create(WHATSAPP_API_CONFIG);
+class WhatsAppApiService {
+  constructor() {
+    this.client = axios.create(WHATSAPP_API_CONFIG);
+    this.setupInterceptors();
+  }
 
-// WhatsApp API Service
-export const whatsappApi = {
-  // Send a WhatsApp message
-  sendMessage: async (phoneNumberId, message, accessToken) => {
-    try {
-      const response = await whatsappClient.post(
-        `/${phoneNumberId}/messages`,
-        message,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          }
+  setupInterceptors() {
+    // Request interceptor to add auth token
+    this.client.interceptors.request.use(
+      (config) => {
+        const whatsappToken = localStorage.getItem('whatsappApiToken') || 
+                            import.meta.env.VITE_WHATSAPP_API_TOKEN;
+        
+        if (whatsappToken) {
+          config.headers.Authorization = `Bearer ${whatsappToken}`;
         }
-      );
+        
+        console.log('WhatsApp API Request:', config.method.toUpperCase(), config.url);
+        return config;
+      },
+      (error) => {
+        console.error('WhatsApp API Request Error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor for error handling
+    this.client.interceptors.response.use(
+      (response) => {
+        console.log('WhatsApp API Response:', response.status, response.config.url);
+        return response;
+      },
+      (error) => {
+        console.error('WhatsApp API Error:', error.response?.status, error.message);
+        return Promise.reject(this.handleApiError(error));
+      }
+    );
+  }
+
+  handleApiError(error) {
+    const errorResponse = {
+      success: false,
+      error: error.message,
+      status: error.response?.status,
+      details: error.response?.data
+    };
+
+    // Handle specific WhatsApp API errors
+    if (error.response?.status === 401) {
+      errorResponse.error = 'WhatsApp API authentication failed. Please check your API token.';
+    } else if (error.response?.status === 429) {
+      errorResponse.error = 'WhatsApp API rate limit exceeded. Please try again later.';
+    } else if (error.response?.status === 400) {
+      errorResponse.error = 'Invalid request format. Please check your message template.';
+    }
+
+    return errorResponse;
+  }
+
+  /**
+   * Send a text message via WhatsApp
+   * @param {string} phoneNumberId - Phone number ID from WhatsApp Business API
+   * @param {string} to - Recipient phone number (with country code)
+   * @param {string} message - Text message to send
+   */
+  async sendTextMessage(phoneNumberId, to, message) {
+    try {
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "text",
+        text: {
+          body: message
+        }
+      };
+
+      const response = await this.client.post(`/${phoneNumberId}/messages`, payload);
       
       return {
         success: true,
@@ -34,92 +95,110 @@ export const whatsappApi = {
         status: response.status
       };
     } catch (error) {
-      console.error('WhatsApp API Error:', error.response?.data || error.message);
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message,
-        status: error.response?.status,
-        code: error.response?.data?.error?.code
-      };
+      return error;
     }
-  },
+  }
 
-  // Send template message
-  sendTemplateMessage: async (phoneNumberId, templateData, accessToken) => {
-    const message = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: templateData.to,
-      type: "template",
-      template: {
-        name: templateData.templateName,
-        language: {
-          code: templateData.languageCode || "en"
-        },
-        components: templateData.components || []
-      }
-    };
+  /**
+   * Send a template message via WhatsApp
+   * @param {string} phoneNumberId - Phone number ID from WhatsApp Business API
+   * @param {string} to - Recipient phone number (with country code)
+   * @param {object} template - Template configuration
+   */
+  async sendTemplateMessage(phoneNumberId, to, template) {
+    try {
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "template",
+        template: {
+          name: template.name,
+          language: {
+            code: template.language || "en"
+          },
+          components: template.components || []
+        }
+      };
 
-    return await whatsappApi.sendMessage(phoneNumberId, message, accessToken);
-  },
+      const response = await this.client.post(`/${phoneNumberId}/messages`, payload);
+      
+      return {
+        success: true,
+        data: response.data,
+        messageId: response.data.messages?.[0]?.id,
+        status: response.status
+      };
+    } catch (error) {
+      return error;
+    }
+  }
 
-  // Send text message
-  sendTextMessage: async (phoneNumberId, to, text, accessToken) => {
-    const message = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: to,
-      type: "text",
-      text: {
-        body: text
-      }
-    };
+  /**
+   * Send a media message (image, document, video)
+   * @param {string} phoneNumberId - Phone number ID from WhatsApp Business API
+   * @param {string} to - Recipient phone number (with country code)
+   * @param {object} media - Media configuration
+   */
+  async sendMediaMessage(phoneNumberId, to, media) {
+    try {
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: media.type, // image, document, video, audio
+        [media.type]: {
+          link: media.url,
+          caption: media.caption || undefined,
+          filename: media.filename || undefined
+        }
+      };
 
-    return await whatsappApi.sendMessage(phoneNumberId, message, accessToken);
-  },
+      const response = await this.client.post(`/${phoneNumberId}/messages`, payload);
+      
+      return {
+        success: true,
+        data: response.data,
+        messageId: response.data.messages?.[0]?.id,
+        status: response.status
+      };
+    } catch (error) {
+      return error;
+    }
+  }
 
-  // Send media message
-  sendMediaMessage: async (phoneNumberId, to, mediaData, accessToken) => {
-    const message = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: to,
-      type: mediaData.type, // 'image', 'document', 'video'
-      [mediaData.type]: {
-        link: mediaData.url,
-        caption: mediaData.caption || ""
-      }
-    };
-
-    return await whatsappApi.sendMessage(phoneNumberId, message, accessToken);
-  },
-
-  // Send bulk messages
-  sendBulkMessages: async (phoneNumberId, recipients, messageTemplate, accessToken) => {
+  /**
+   * Send bulk messages to multiple recipients
+   * @param {string} phoneNumberId - Phone number ID from WhatsApp Business API
+   * @param {Array} recipients - Array of recipient objects with phone and personalized data
+   * @param {object} messageTemplate - Message template configuration
+   */
+  async sendBulkMessages(phoneNumberId, recipients, messageTemplate) {
     const results = [];
+    const batchSize = 10; // Process in batches to avoid rate limiting
     
-    // Process in batches to respect rate limits
-    const batchSize = 10;
     for (let i = 0; i < recipients.length; i += batchSize) {
       const batch = recipients.slice(i, i + batchSize);
       
       const batchPromises = batch.map(async (recipient) => {
         try {
-          // Replace variables in message template
-          const personalizedMessage = whatsappApi.replaceVariables(messageTemplate, recipient.variables || {});
+          let result;
           
-          const result = await whatsappApi.sendTextMessage(
-            phoneNumberId,
-            recipient.phone,
-            personalizedMessage,
-            accessToken
-          );
+          if (messageTemplate.type === 'template') {
+            // Replace variables in template components
+            const personalizedTemplate = this.personalizeTemplate(messageTemplate.template, recipient.data);
+            result = await this.sendTemplateMessage(phoneNumberId, recipient.phone, personalizedTemplate);
+          } else {
+            // Replace variables in text message
+            const personalizedMessage = this.personalizeMessage(messageTemplate.message, recipient.data);
+            result = await this.sendTextMessage(phoneNumberId, recipient.phone, personalizedMessage);
+          }
           
           return {
             recipient: recipient.phone,
             success: result.success,
             messageId: result.messageId,
-            error: result.error
+            error: result.error || null
           };
         } catch (error) {
           return {
@@ -129,125 +208,142 @@ export const whatsappApi = {
           };
         }
       });
-      
+
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults);
-      
+
       // Add delay between batches to respect rate limits
       if (i + batchSize < recipients.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    
+
     return {
       success: true,
       results: results,
-      total: recipients.length,
-      successful: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length
-    };
-  },
-
-  // Replace variables in message template
-  replaceVariables: (template, variables) => {
-    let message = template;
-    
-    // Replace {{variable}} patterns
-    Object.keys(variables).forEach(key => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      message = message.replace(regex, variables[key] || '');
-    });
-    
-    return message;
-  },
-
-  // Validate phone number format
-  validatePhoneNumber: (phone) => {
-    // Remove all non-digit characters
-    const cleanPhone = phone.replace(/\D/g, '');
-    
-    // Check if it's a valid international format
-    if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
-      return {
-        valid: true,
-        formatted: cleanPhone
-      };
-    }
-    
-    return {
-      valid: false,
-      error: 'Phone number must be 10-15 digits'
-    };
-  },
-
-  // Create template component for header with image
-  createHeaderComponent: (imageUrl) => ({
-    type: "header",
-    parameters: [
-      {
-        type: "image",
-        image: {
-          link: imageUrl
-        }
-      }
-    ]
-  }),
-
-  // Create template component for body with text variables
-  createBodyComponent: (variables) => ({
-    type: "body",
-    parameters: variables.map(variable => ({
-      type: "text",
-      text: variable
-    }))
-  }),
-
-  // Get message delivery status (mock implementation)
-  getMessageStatus: async (messageId, accessToken) => {
-    // This would typically query the WhatsApp API for message status
-    // For now, returning mock data
-    return {
-      success: true,
-      data: {
-        id: messageId,
-        status: 'delivered', // sent, delivered, read, failed
-        timestamp: new Date().toISOString(),
-        recipient_id: 'unknown'
+      summary: {
+        total: recipients.length,
+        sent: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
       }
     };
   }
-};
 
-// WhatsApp Template Management
-export const templateApi = {
-  // Get available templates (mock implementation)
-  getTemplates: async () => {
-    // This would typically fetch from WhatsApp Business API
+  /**
+   * Personalize a text message with recipient data
+   * @param {string} message - Message template with variables
+   * @param {object} data - Recipient data for variable substitution
+   */
+  personalizeMessage(message, data) {
+    let personalizedMessage = message;
+    
+    // Replace variables in format {{variable_name}}
+    Object.keys(data).forEach(key => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      personalizedMessage = personalizedMessage.replace(regex, data[key]);
+    });
+    
+    return personalizedMessage;
+  }
+
+  /**
+   * Personalize a template with recipient data
+   * @param {object} template - Template configuration
+   * @param {object} data - Recipient data for variable substitution
+   */
+  personalizeTemplate(template, data) {
+    const personalizedTemplate = JSON.parse(JSON.stringify(template)); // Deep clone
+    
+    // Process each component
+    if (personalizedTemplate.components) {
+      personalizedTemplate.components = personalizedTemplate.components.map(component => {
+        if (component.parameters) {
+          component.parameters = component.parameters.map(param => {
+            if (param.type === 'text' && param.text) {
+              param.text = this.personalizeMessage(param.text, data);
+            }
+            return param;
+          });
+        }
+        return component;
+      });
+    }
+    
+    return personalizedTemplate;
+  }
+
+  /**
+   * Schedule a message for future delivery
+   * @param {string} phoneNumberId - Phone number ID
+   * @param {object} messageData - Message configuration
+   * @param {Date} scheduledTime - When to send the message
+   */
+  async scheduleMessage(phoneNumberId, messageData, scheduledTime) {
+    // Note: WhatsApp API doesn't natively support scheduling
+    // This would typically be handled by the backend scheduler
+    const scheduledMessage = {
+      id: `scheduled_${Date.now()}`,
+      phoneNumberId,
+      messageData,
+      scheduledTime,
+      status: 'scheduled',
+      createdAt: new Date()
+    };
+
+    // Store in localStorage for now (in production, this would be backend)
+    const scheduledMessages = JSON.parse(localStorage.getItem('scheduledMessages') || '[]');
+    scheduledMessages.push(scheduledMessage);
+    localStorage.setItem('scheduledMessages', JSON.stringify(scheduledMessages));
+
+    return {
+      success: true,
+      data: scheduledMessage
+    };
+  }
+
+  /**
+   * Get message delivery status
+   * @param {string} messageId - Message ID returned from send operation
+   */
+  async getMessageStatus(messageId) {
+    // Note: This would typically require webhook setup for real-time status
+    // For now, return mock status data
+    return {
+      success: true,
+      data: {
+        messageId,
+        status: 'delivered', // sent, delivered, read, failed
+        timestamp: new Date(),
+        readTimestamp: null
+      }
+    };
+  }
+
+  /**
+   * Get available message templates
+   * @param {string} phoneNumberId - Phone number ID
+   */
+  async getTemplates(phoneNumberId) {
+    // This would typically be a separate API call to get approved templates
+    // For now, return mock templates
     const mockTemplates = [
       {
-        id: 'welcome_message',
         name: 'welcome_message',
+        category: 'MARKETING',
         language: 'en',
         status: 'APPROVED',
-        category: 'MARKETING',
         components: [
           {
-            type: 'HEADER',
-            format: 'TEXT',
-            text: 'Welcome to {{1}}'
-          },
-          {
             type: 'BODY',
-            text: 'Hi {{1}}, welcome to our real estate family! We are excited to help you find your dream property. Our team will be in touch shortly to understand your requirements.'
+            text: 'Welcome {{1}}! Thank you for your interest in {{2}}. Our team will contact you shortly.'
           }
         ]
       },
       {
-        id: 'property_update',
         name: 'property_update',
+        category: 'MARKETING',
         language: 'en',
         status: 'APPROVED',
-        category: 'MARKETING',
         components: [
           {
             type: 'HEADER',
@@ -255,20 +351,7 @@ export const templateApi = {
           },
           {
             type: 'BODY',
-            text: 'New property alert! {{1}} is now available. {{2}} apartments starting from {{3}}. Book your site visit today!'
-          }
-        ]
-      },
-      {
-        id: 'site_visit_reminder',
-        name: 'site_visit_reminder',
-        language: 'en',
-        status: 'APPROVED',
-        category: 'UTILITY',
-        components: [
-          {
-            type: 'BODY',
-            text: 'Hi {{1}}, reminder about your site visit tomorrow at {{2}} for {{3}}. Our sales executive will meet you at the property location.'
+            text: 'New property alert! {{1}} in {{2}} is now available. {{3}} starting from {{4}}. Book your site visit today!'
           }
         ]
       }
@@ -278,13 +361,49 @@ export const templateApi = {
       success: true,
       data: mockTemplates
     };
-  },
+  }
+}
 
-  // Validate template variables
+// Create and export a singleton instance
+const whatsappApiService = new WhatsAppApiService();
+
+// Legacy API for backward compatibility
+export const whatsappApi = {
+  sendMessage: (phoneNumberId, message, accessToken) => 
+    whatsappApiService.sendTextMessage(phoneNumberId, message.to, message.text?.body),
+  sendTemplateMessage: (phoneNumberId, templateData, accessToken) =>
+    whatsappApiService.sendTemplateMessage(phoneNumberId, templateData.to, templateData),
+  sendTextMessage: (phoneNumberId, to, text, accessToken) =>
+    whatsappApiService.sendTextMessage(phoneNumberId, to, text),
+  sendMediaMessage: (phoneNumberId, to, mediaData, accessToken) =>
+    whatsappApiService.sendMediaMessage(phoneNumberId, to, mediaData),
+  sendBulkMessages: (phoneNumberId, recipients, messageTemplate, accessToken) =>
+    whatsappApiService.sendBulkMessages(phoneNumberId, recipients, messageTemplate),
+  replaceVariables: (template, variables) => 
+    whatsappApiService.personalizeMessage(template, variables),
+  validatePhoneNumber: (phone) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
+      return { valid: true, formatted: cleanPhone };
+    }
+    return { valid: false, error: 'Phone number must be 10-15 digits' };
+  },
+  createHeaderComponent: (imageUrl) => ({
+    type: "header",
+    parameters: [{ type: "image", image: { link: imageUrl } }]
+  }),
+  createBodyComponent: (variables) => ({
+    type: "body",
+    parameters: variables.map(variable => ({ type: "text", text: variable }))
+  }),
+  getMessageStatus: (messageId, accessToken) => whatsappApiService.getMessageStatus(messageId)
+};
+
+// Template Management API
+export const templateApi = {
+  getTemplates: () => whatsappApiService.getTemplates(),
   validateTemplate: (template, variables) => {
     const errors = [];
-    
-    // Check if all required variables are provided
     template.components.forEach(component => {
       if (component.type === 'BODY' || component.type === 'HEADER') {
         const matches = component.text?.match(/{{(\d+)}}/g) || [];
@@ -296,12 +415,9 @@ export const templateApi = {
         });
       }
     });
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
+    return { valid: errors.length === 0, errors };
   }
 };
 
-export default whatsappApi;
+export default whatsappApiService;
+export { WhatsAppApiService };
