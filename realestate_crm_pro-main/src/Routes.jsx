@@ -2,8 +2,9 @@ import React from "react";
 import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
+import { ProtectedRoute } from "./auth";
 // Add your imports here
-import Login from "pages/login";
+import Login from "./auth/Login";
 import Dashboard from "pages/dashboard";
 import SiteVisitsScheduler from "pages/site-visits-scheduler";
 import AnalyticsReports from "pages/analytics-reports";
@@ -19,16 +20,52 @@ const Routes = () => {
       <ErrorBoundary>
       <ScrollToTop />
       <RouterRoutes>
-        {/* Define your routes here */}
-        <Route path="/" element={<Dashboard />} />
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/site-visits-scheduler" element={<SiteVisitsScheduler />} />
-        <Route path="/analytics-reports" element={<AnalyticsReports />} />
-        <Route path="/opportunities-management" element={<OpportunitiesManagement />} />
-        <Route path="/leads-management" element={<LeadsManagement />} />
-        <Route path="/user-management" element={<UserManagement />} />
-        <Route path="/whats-app-campaign-management" element={<WhatsAppCampaignManagement />} />
+        
+        {/* Protected routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/site-visits-scheduler" element={
+          <ProtectedRoute>
+            <SiteVisitsScheduler />
+          </ProtectedRoute>
+        } />
+        <Route path="/analytics-reports" element={
+          <ProtectedRoute>
+            <AnalyticsReports />
+          </ProtectedRoute>
+        } />
+        <Route path="/opportunities-management" element={
+          <ProtectedRoute>
+            <OpportunitiesManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/leads-management" element={
+          <ProtectedRoute>
+            <LeadsManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/user-management" element={
+          <ProtectedRoute requiredRole="admin">
+            <UserManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/whats-app-campaign-management" element={
+          <ProtectedRoute>
+            <WhatsAppCampaignManagement />
+          </ProtectedRoute>
+        } />
+        
+        {/* 404 route */}
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>

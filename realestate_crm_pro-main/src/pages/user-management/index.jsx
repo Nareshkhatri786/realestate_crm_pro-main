@@ -8,122 +8,66 @@ import UserTable from './components/UserTable';
 import UserProfileModal from './components/UserProfileModal';
 import AddUserModal from './components/AddUserModal';
 import MobileUserCard from './components/MobileUserCard';
+import { usersApi } from '../../api';
+import { useNotifications } from '../../notifications';
 
 const UserManagement = () => {
   const navigate = useNavigate();
+  const { showSuccess, showError } = useNotifications();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [filters, setFilters] = useState({});
   const [isMobile, setIsMobile] = useState(false);
 
-  // Mock data
-  const mockUsers = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      phone: '+91-9876543210',
-      role: 'admin',
-      department: 'admin',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 300000),
-      projects: ['Skyline Residences', 'Marina Heights']
-    },
-    {
-      id: 2,
-      name: 'Priya Sharma',
-      email: 'priya.sharma@company.com',
-      phone: '+91-9876543211',
-      role: 'project_manager',
-      department: 'sales',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 600000),
-      projects: ['Skyline Residences', 'Garden View Apartments']
-    },
-    {
-      id: 3,
-      name: 'Amit Patel',
-      email: 'amit.patel@company.com',
-      phone: '+91-9876543212',
-      role: 'sales_executive',
-      department: 'sales',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 1800000),
-      projects: ['Marina Heights', 'Downtown Plaza']
-    },
-    {
-      id: 4,
-      name: 'Neha Joshi',
-      email: 'neha.joshi@company.com',
-      phone: '+91-9876543213',
-      role: 'sales_executive',
-      department: 'sales',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 3600000),
-      projects: ['Skyline Residences']
-    },
-    {
-      id: 5,
-      name: 'Rohit Singh',
-      email: 'rohit.singh@company.com',
-      phone: '+91-9876543214',
-      role: 'telecaller',
-      department: 'sales',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 7200000),
-      projects: ['Marina Heights', 'Garden View Apartments']
-    },
-    {
-      id: 6,
-      name: 'Kavita Reddy',
-      email: 'kavita.reddy@company.com',
-      phone: '+91-9876543215',
-      role: 'telecaller',
-      department: 'sales',
-      status: 'inactive',
-      lastLogin: new Date(Date.now() - 86400000),
-      projects: ['Downtown Plaza']
-    },
-    {
-      id: 7,
-      name: 'Suresh Gupta',
-      email: 'suresh.gupta@company.com',
-      phone: '+91-9876543216',
-      role: 'sales_executive',
-      department: 'marketing',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 172800000),
-      projects: ['Skyline Residences', 'Marina Heights', 'Garden View Apartments']
-    },
-    {
-      id: 8,
-      name: 'Meera Devi',
-      email: 'meera.devi@company.com',
-      phone: '+91-9876543217',
-      role: 'telecaller',
-      department: 'sales',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 259200000),
-      projects: ['Downtown Plaza']
-    }
-  ];
-
+  // Fetch users from API
   useEffect(() => {
-    // Simulate API call
     const fetchUsers = async () => {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUsers(mockUsers);
-      setFilteredUsers(mockUsers);
-      setLoading(false);
+      setError(null);
+      
+      try {
+        const response = await usersApi.getAllUsers();
+        
+        if (response.success) {
+          setUsers(response.data);
+          setFilteredUsers(response.data);
+          showSuccess('Users loaded successfully');
+        } else {
+          throw new Error(response.error || 'Failed to load users');
+        }
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError(err.message);
+        showError('Failed to load users. Please try again.');
+        
+        // Fallback to mock data for demo purposes
+        const mockUsers = [
+          {
+            id: 1,
+            name: 'John Doe',
+            email: 'john.doe@company.com',
+            phone: '+91-9876543210',
+            role: 'admin',
+            department: 'admin',
+            status: 'active',
+            lastLogin: new Date(Date.now() - 300000),
+            projects: ['Skyline Residences', 'Marina Heights']
+          }
+        ];
+        setUsers(mockUsers);
+        setFilteredUsers(mockUsers);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchUsers();
-  }, []);
+  }, [showSuccess, showError]);
 
   useEffect(() => {
     const checkMobile = () => {
