@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const LeadActionBar = ({ selectedLeads, onBulkAction, onImportLeads, onExportLeads }) => {
+const LeadActionBar = ({ selectedLeads, onBulkAction, onImportLeads, onExportLeads, onManageFields }) => {
   const [bulkActionDropdown, setBulkActionDropdown] = useState(false);
   const [assignmentDropdown, setAssignmentDropdown] = useState(false);
 
@@ -136,6 +136,16 @@ const LeadActionBar = ({ selectedLeads, onBulkAction, onImportLeads, onExportLea
 
         {/* Right Section - Primary Actions */}
         <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onManageFields}
+            iconName="Settings"
+            iconPosition="left"
+          >
+            Manage Fields
+          </Button>
+          
           <Button
             variant="outline"
             size="sm"

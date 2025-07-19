@@ -237,37 +237,45 @@ const LeadTable = ({ leads, onLeadSelect, onBulkAction, selectedLeads, onSelectA
                   <div className="absolute right-0 mt-1 w-48 bg-surface border border-border rounded-md shadow-lg z-10">
                         <div className="py-1">
                           <button
-                        onClick={() => handleActionClick(lead.id, 'call')}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
-
+                            onClick={() => handleActionClick(lead.id, 'call-tracker')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
                             <Icon name="Phone" size={14} />
-                            <span>Log Call</span>
+                            <span>Call Tracker</span>
                           </button>
                           <button
-                        onClick={() => handleActionClick(lead.id, 'whatsapp')}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
-
+                            onClick={() => handleActionClick(lead.id, 'whatsapp')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
                             <Icon name="MessageCircle" size={14} />
                             <span>Send WhatsApp</span>
                           </button>
                           <button
-                        onClick={() => handleActionClick(lead.id, 'qualify')}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
-
+                            onClick={() => handleActionClick(lead.id, 'interactions')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
+                            <Icon name="Activity" size={14} />
+                            <span>View Timeline</span>
+                          </button>
+                          <div className="border-t border-border my-1"></div>
+                          <button
+                            onClick={() => handleActionClick(lead.id, 'call')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
+                            <Icon name="PhoneCall" size={14} />
+                            <span>Quick Call</span>
+                          </button>
+                          <button
+                            onClick={() => handleActionClick(lead.id, 'qualify')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
                             <Icon name="CheckCircle" size={14} />
                             <span>Update Status</span>
                           </button>
                           <button
-                        onClick={() => handleActionClick(lead.id, 'convert')}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
-
+                            onClick={() => handleActionClick(lead.id, 'convert')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
                             <Icon name="ArrowRight" size={14} />
                             <span>Convert to Opportunity</span>
                           </button>
                           <button
-                        onClick={() => handleActionClick(lead.id, 'assign')}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
-
+                            onClick={() => handleActionClick(lead.id, 'assign')}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-text-primary hover:bg-background-secondary">
                             <Icon name="UserPlus" size={14} />
                             <span>Reassign</span>
                           </button>
