@@ -10,8 +10,10 @@ import SiteVisitsScheduler from "pages/site-visits-scheduler";
 import AnalyticsReports from "pages/analytics-reports";
 import OpportunitiesManagement from "pages/opportunities-management";
 import LeadsManagement from "pages/leads-management";
+import LeadDetails from "pages/leads-management/LeadDetails";
 import UserManagement from "pages/user-management";
 import WhatsAppCampaignManagement from "pages/whats-app-campaign-management";
+import SettingsPage from "pages/settings";
 import NotFound from "pages/NotFound";
 
 const Routes = () => {
@@ -54,6 +56,11 @@ const Routes = () => {
             <LeadsManagement />
           </ProtectedRoute>
         } />
+        <Route path="/leads/:id" element={
+          <ProtectedRoute>
+            <LeadDetails />
+          </ProtectedRoute>
+        } />
         <Route path="/user-management" element={
           <ProtectedRoute requiredRole="admin">
             <UserManagement />
@@ -62,6 +69,11 @@ const Routes = () => {
         <Route path="/whats-app-campaign-management" element={
           <ProtectedRoute>
             <WhatsAppCampaignManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         } />
         
