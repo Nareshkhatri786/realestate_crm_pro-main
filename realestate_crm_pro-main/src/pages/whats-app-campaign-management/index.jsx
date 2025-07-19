@@ -6,16 +6,25 @@ import Icon from '../../components/AppIcon';
 import CampaignBuilder from './components/CampaignBuilder';
 import ActiveCampaigns from './components/ActiveCampaigns';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import WhatsAppSettings from './components/WhatsAppSettings';
+import TemplateBuilder from './components/TemplateBuilder';
+import MessageSender from './components/MessageSender';
 
 const WhatsAppCampaignManagement = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('campaigns');
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTemplateBuilderOpen, setIsTemplateBuilderOpen] = useState(false);
+  const [isMessageSenderOpen, setIsMessageSenderOpen] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [editingTemplate, setEditingTemplate] = useState(null);
 
   const tabs = [
     { id: 'campaigns', label: 'Active Campaigns', icon: 'MessageCircle' },
     { id: 'builder', label: 'Campaign Builder', icon: 'Plus' },
+    { id: 'templates', label: 'Templates', icon: 'FileText' },
     { id: 'analytics', label: 'Analytics', icon: 'BarChart3' }
   ];
 
@@ -155,6 +164,33 @@ const WhatsAppCampaignManagement = () => {
     setActiveTab('campaigns');
   };
 
+  const handleSaveTemplate = (templateData) => {
+    // Save template to local storage or API
+    const savedTemplates = JSON.parse(localStorage.getItem('whatsapp_templates') || '[]');
+    const updatedTemplates = editingTemplate 
+      ? savedTemplates.map(t => t.id === editingTemplate.id ? templateData : t)
+      : [...savedTemplates, templateData];
+    
+    localStorage.setItem('whatsapp_templates', JSON.stringify(updatedTemplates));
+    setEditingTemplate(null);
+  };
+
+  const handleSendMessage = (recipients) => {
+    setSelectedRecipients(recipients);
+    setIsMessageSenderOpen(true);
+  };
+
+  const handleSendComplete = (results) => {
+    // Update campaign metrics or create new interaction logs
+    console.log('Message send results:', results);
+    // Here you would typically update the backend with the results
+  };
+
+  const handleSettingsSave = (settings) => {
+    // Settings are saved in the component, but we could also update global state here
+    console.log('WhatsApp settings saved:', settings);
+  };
+
   const handleCampaignAction = (campaign, action) => {
     switch (action) {
       case 'pause':
@@ -222,9 +258,16 @@ const WhatsAppCampaignManagement = () => {
               <Button
                 variant="outline"
                 iconName="Settings"
-                onClick={() => {/* Open settings */}}
+                onClick={() => setIsSettingsOpen(true)}
               >
                 Settings
+              </Button>
+              <Button
+                variant="outline"
+                iconName="FileText"
+                onClick={() => setIsTemplateBuilderOpen(true)}
+              >
+                New Template
               </Button>
               <Button
                 variant="primary"
@@ -336,12 +379,62 @@ const WhatsAppCampaignManagement = () => {
                   {activeTab === 'analytics' && (
                     <AnalyticsDashboard />
                   )}
+                  
+                  {activeTab === 'templates' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium text-text-primary">Message Templates</h3>
+                        <Button
+                          variant="primary"
+                          iconName="Plus"
+                          onClick={() => setIsTemplateBuilderOpen(true)}
+                        >
+                          Create Template
+                        </Button>
+                      </div>
+                      
+                      <div className="text-center py-12 text-text-secondary">
+                        <Icon name="FileText" size={48} className="mx-auto mb-4 text-text-muted" />
+                        <p>Template management interface will be displayed here</p>
+                        <p className="text-sm mt-2">Use the "Create Template" button to build new templates</p>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
           </div>
         </div>
       </main>
+      
+      {/* WhatsApp Settings Modal */}
+      <WhatsAppSettings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={handleSettingsSave}
+      />
+      
+      {/* Template Builder Modal */}
+      <TemplateBuilder
+        isOpen={isTemplateBuilderOpen}
+        onClose={() => {
+          setIsTemplateBuilderOpen(false);
+          setEditingTemplate(null);
+        }}
+        onSave={handleSaveTemplate}
+        editTemplate={editingTemplate}
+      />
+      
+      {/* Message Sender Modal */}
+      <MessageSender
+        isOpen={isMessageSenderOpen}
+        onClose={() => {
+          setIsMessageSenderOpen(false);
+          setSelectedRecipients([]);
+        }}
+        recipients={selectedRecipients}
+        onSendComplete={handleSendComplete}
+      />
     </div>
   );
 };
