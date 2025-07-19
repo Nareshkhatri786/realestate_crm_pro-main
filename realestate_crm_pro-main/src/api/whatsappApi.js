@@ -367,5 +367,57 @@ class WhatsAppApiService {
 // Create and export a singleton instance
 const whatsappApiService = new WhatsAppApiService();
 
+// Legacy API for backward compatibility
+export const whatsappApi = {
+  sendMessage: (phoneNumberId, message, accessToken) => 
+    whatsappApiService.sendTextMessage(phoneNumberId, message.to, message.text?.body),
+  sendTemplateMessage: (phoneNumberId, templateData, accessToken) =>
+    whatsappApiService.sendTemplateMessage(phoneNumberId, templateData.to, templateData),
+  sendTextMessage: (phoneNumberId, to, text, accessToken) =>
+    whatsappApiService.sendTextMessage(phoneNumberId, to, text),
+  sendMediaMessage: (phoneNumberId, to, mediaData, accessToken) =>
+    whatsappApiService.sendMediaMessage(phoneNumberId, to, mediaData),
+  sendBulkMessages: (phoneNumberId, recipients, messageTemplate, accessToken) =>
+    whatsappApiService.sendBulkMessages(phoneNumberId, recipients, messageTemplate),
+  replaceVariables: (template, variables) => 
+    whatsappApiService.personalizeMessage(template, variables),
+  validatePhoneNumber: (phone) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
+      return { valid: true, formatted: cleanPhone };
+    }
+    return { valid: false, error: 'Phone number must be 10-15 digits' };
+  },
+  createHeaderComponent: (imageUrl) => ({
+    type: "header",
+    parameters: [{ type: "image", image: { link: imageUrl } }]
+  }),
+  createBodyComponent: (variables) => ({
+    type: "body",
+    parameters: variables.map(variable => ({ type: "text", text: variable }))
+  }),
+  getMessageStatus: (messageId, accessToken) => whatsappApiService.getMessageStatus(messageId)
+};
+
+// Template Management API
+export const templateApi = {
+  getTemplates: () => whatsappApiService.getTemplates(),
+  validateTemplate: (template, variables) => {
+    const errors = [];
+    template.components.forEach(component => {
+      if (component.type === 'BODY' || component.type === 'HEADER') {
+        const matches = component.text?.match(/{{(\d+)}}/g) || [];
+        matches.forEach(match => {
+          const index = parseInt(match.replace(/[{}]/g, '')) - 1;
+          if (!variables[index]) {
+            errors.push(`Missing variable for ${match}`);
+          }
+        });
+      }
+    });
+    return { valid: errors.length === 0, errors };
+  }
+};
+
 export default whatsappApiService;
 export { WhatsAppApiService };
