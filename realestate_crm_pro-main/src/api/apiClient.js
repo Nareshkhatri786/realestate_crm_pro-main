@@ -3,7 +3,7 @@ import axios from 'axios';
 // API configuration
 const API_CONFIG = {
   // TODO: Replace with actual API URLs in future PRs
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'https://jsonplaceholder.typicode.com',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://jsonplaceholder.typicode.com',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

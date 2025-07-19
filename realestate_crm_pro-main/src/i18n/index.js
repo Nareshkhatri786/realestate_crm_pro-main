@@ -33,7 +33,7 @@ i18n
     },
 
     // Debug mode for development
-    debug: process.env.NODE_ENV === 'development',
+    debug: import.meta.env.DEV,
 
     // TODO: Add language detection in future PRs
     // detection: {
